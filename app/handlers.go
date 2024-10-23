@@ -3,13 +3,9 @@ package app
 import (
 	"encoding/json"
 	"fmt"
-
-	// "fmt"
 	"net/http"
 	"time"
-
 	"github.com/gorilla/mux"
-	// "github.com/gorilla/mux"
 )
 
 type times struct {
