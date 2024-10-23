@@ -4,26 +4,38 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
-	"github.com/gorilla/mux"
 )
 
-type times struct {
-	CurrTime time.Time `json:"current_time"`
-}
 
 func getTime(w http.ResponseWriter, r *http.Request) {
-	w.Header().Add("Content-Type", "application/json")
-	vars := mux.Vars(r)
-	varstr := fmt.Sprint(vars)
-	loc, _ := time.LoadLocation(string(varstr))
-	time1 := []times{
-		{time.Now()},
-		{time.Now().In(loc)},
-	}
-	json.NewEncoder(w).Encode(time1)
-}
+    response := make(map[string]string, 0)
+    tz := r.URL.Query().Get("tz")
+    timezones := strings.Split(tz, ",")
 
-func getLocalTime(w http.ResponseWriter, r *http.Request){
-	fmt.Fprint(w,"Local current time: ",time.Now().UTC())
+    if len(timezones) <= 1 {
+        loc, err := time.LoadLocation(tz)
+        if err != nil {
+            w.WriteHeader(http.StatusNotFound)
+            w.Write([]byte(fmt.Sprintf("invalid timezone %s", tz)))
+        } else {
+            response["current_time"] = time.Now().In(loc).String()
+            w.Header().Add("Content-Type", "application/json")
+            json.NewEncoder(w).Encode(response)
+        }
+     } else {
+        for _, tzdb := range timezones {
+            loc, err := time.LoadLocation(tzdb)
+            if err != nil {
+                w.WriteHeader(http.StatusNotFound)
+                w.Write([]byte(fmt.Sprintf("invalid timezone %s in input", tzdb)))
+                return
+             }
+             now := time.Now().In(loc)
+             response[tzdb] = now.String()
+        }
+        w.Header().Add("Content-Type", "application/json")
+        json.NewEncoder(w).Encode(response)
+     }
 }
